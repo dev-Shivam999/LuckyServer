@@ -1,20 +1,17 @@
-// server.ts
+
 import express, { Request, Response } from 'express';
 import bodyParser from 'body-parser';
 import cors from 'cors';
 
 import { v2 as cloudinary } from "cloudinary";
-import { error, PDFDocument, rgb } from 'pdf-lib';
+import {  PDFDocument, rgb } from 'pdf-lib';
 import { v4 as uuidv4 } from 'uuid';
 import twilio from 'twilio';
 import dotenv from 'dotenv';
+import os from "os"
+import cluster from 'cluster';
 
 dotenv.config();
-
-const app = express();
-app.use(cors());
-app.use(bodyParser.json());
-
 const accountSid = `${process.env.AccountSid}`;
 const authToken = `${process.env.AuthToken}`;
 const fromWhatsAppNumber = 'whatsapp:+14155238886';
@@ -24,8 +21,34 @@ cloudinary.config({
     api_key: `${process.env.CloudApi}`,
     api_secret: `${process.env.CloudSecret}`
 });
-console.log(process.env.CloudApi);
 
+
+
+
+
+const totalCpus =os.cpus().length
+console.log(totalCpus);
+
+
+if (cluster.isPrimary) {
+
+
+    for (let i = 0; i < totalCpus; i++) {
+        cluster.fork();
+    }
+
+    cluster.on("exit", (worker, code, signal) => {
+        console.log(`worker ${worker.process.pid} exited, starting a new one...`);
+        cluster.fork();
+    });
+    
+}else{
+
+
+    const app = express();
+    app.use(cors());
+    app.use(bodyParser.json());
+   
 //@ts-ignore
 app.post('/api/send-pdf', async (req: Request, res: Response) => {
     const { username, password, phoneNumber } = req.body;
@@ -67,17 +90,19 @@ app.post('/api/send-pdf', async (req: Request, res: Response) => {
 
         const uploadResult = await uploadToCloudinary();
 
+        
         const data = {
             from: fromWhatsAppNumber,
             to: `whatsapp:+91${phoneNumber}`,
             body: `Hello ${username},`,
             mediaUrl: [uploadResult.secure_url]
-
+            
         }
+        console.log(data);
 
         const a = await client.messages.create(data);
 
-        console.log(a);
+        console.log("res",a);
 
         res.status(200).json({ message: 'PDF sent successfully via WhatsApp!' });
     } catch (error) {
@@ -88,3 +113,4 @@ app.post('/api/send-pdf', async (req: Request, res: Response) => {
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
+}
