@@ -82,7 +82,8 @@ app.post('/api/send-pdf', async (req: Request, res: Response) => {
         const uploadToCloudinary = () =>
             new Promise<{ secure_url: string }>((resolve, reject) => {
                 const uploadStream = cloudinary.uploader.upload_stream(
-                    { resource_type: 'raw', folder: 'pdfs', public_id: `Ticket-${Number}` },
+                    { resource_type: 'raw', folder: 'pdfs', public_id: `Ticket-${Number}`,
+                        expires_at: Math.floor(Date.now() / 1000) + 30, },
                     (error, result) => {
                         if (error) return reject(error);
                         if (result) return resolve(result);
