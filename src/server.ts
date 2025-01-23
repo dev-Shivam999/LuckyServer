@@ -49,7 +49,10 @@ if (cluster.isPrimary) {
     app.use(cors());
     app.use(bodyParser.json());
    
-//@ts-ignore
+    app.get('/test', (req, res) => {
+        res.json({success: true});
+    })
+    //@ts-ignore
 app.post('/api/send-pdf', async (req: Request, res: Response) => {
     const { username, password, phoneNumber } = req.body;
 
@@ -98,11 +101,9 @@ app.post('/api/send-pdf', async (req: Request, res: Response) => {
             mediaUrl: [uploadResult.secure_url]
             
         }
-        console.log(data);
 
         const a = await client.messages.create(data);
 
-        console.log("res",a);
 
         res.status(200).json({ message: 'PDF sent successfully via WhatsApp!' });
     } catch (error) {
